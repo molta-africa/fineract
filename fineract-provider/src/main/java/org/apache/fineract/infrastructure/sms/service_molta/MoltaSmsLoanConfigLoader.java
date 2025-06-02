@@ -56,6 +56,7 @@ public class MoltaSmsLoanConfigLoader {
             actions.put("reject", false);
             actions.put("disburse", false);
             actions.put("repayment", false);
+            actions.put("completion", false);
             moltaSmsLoanConfig.setActions(actions);
         }
 
@@ -70,6 +71,7 @@ public class MoltaSmsLoanConfigLoader {
             campaigns.put("reject", "Loan Rejected Status Notification");
             campaigns.put("disburse", "Loan Disbursed Status Notification");
             campaigns.put("repayment", "Loan Repayment Status Notification");
+            campaigns.put("completion", "Loan Completion Status Notification");
             moltaSmsLoanConfig.setCampaigns(campaigns);
         }
     }

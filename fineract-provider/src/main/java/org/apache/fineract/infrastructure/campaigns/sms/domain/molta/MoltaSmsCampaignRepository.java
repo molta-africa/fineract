@@ -24,6 +24,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 public interface MoltaSmsCampaignRepository extends JpaRepository<SmsCampaign, Long>, JpaSpecificationExecutor<SmsCampaign> {
 
-    SmsCampaign findByCampaignName(String campaignName);
+    SmsCampaign findFirstByCampaignNameOrderByIdDesc(String campaignName);
 
 }

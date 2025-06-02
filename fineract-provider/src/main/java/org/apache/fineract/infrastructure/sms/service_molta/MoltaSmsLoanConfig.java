@@ -49,6 +49,10 @@ public class MoltaSmsLoanConfig {
         return actions.getOrDefault("repayment", false);
     }
 
+    public boolean isCompletionEnabled() {
+        return actions.getOrDefault("completion", false);
+    }
+
     public String getDueRepaymentCampaign() {
         return campaigns.getOrDefault("dueRepayment", "Loan Repayment Due Notification");
     }
@@ -63,6 +67,10 @@ public class MoltaSmsLoanConfig {
 
     public String getDisbursedCampaign() {
         return campaigns.getOrDefault("disburse", "Loan Disbursed Status Notification");
+    }
+
+    public String getCompletionCampaign() {
+        return campaigns.getOrDefault("completion", "Loan Disbursed Status Notification");
     }
 
     public String getRepaymentCampaign() {

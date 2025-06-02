@@ -113,6 +113,8 @@ dependencies {
             'org.mapstruct:mapstruct',
 
             'io.github.resilience4j:resilience4j-spring-boot3',
+
+            'com.auth0:java-jwt:4.4.0',
             )
 
     implementation 'software.amazon.msk:aws-msk-iam-auth'

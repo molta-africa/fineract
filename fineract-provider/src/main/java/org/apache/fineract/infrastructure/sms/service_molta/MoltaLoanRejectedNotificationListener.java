@@ -60,7 +60,7 @@ public class MoltaLoanRejectedNotificationListener implements BusinessEventListe
 
                 // Find the campaign
                 String campaignName = moltaSmsLoanConfig.getRejectedCampaign();
-                SmsCampaign smsCampaign = moltaSmsCampaignRepository.findByCampaignName(campaignName);
+                SmsCampaign smsCampaign = moltaSmsCampaignRepository.findFirstByCampaignNameOrderByIdDesc(campaignName);
 
                 if (smsCampaign == null || StringUtils.isBlank(smsCampaign.getMessage())) {
                     log.error("SMS campaign message '{}' not found. Please create it through the API first.", campaignName);
