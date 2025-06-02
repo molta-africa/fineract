@@ -60,7 +60,7 @@ public class MoltaLoanRepaymentDueNotificationListener implements BusinessEventL
             if (client != null && client.mobileNo() != null && !client.mobileNo().isEmpty()) {
                 // find the sms campaign
                 String campaignName = moltaSmsLoanConfigLoader.getMoltaSmsLoanConfig().getDueRepaymentCampaign();
-                SmsCampaign smsCampaign = moltaSmsCampaignRepository.findByCampaignName(campaignName);
+                SmsCampaign smsCampaign = moltaSmsCampaignRepository.findFirstByCampaignNameOrderByIdDesc(campaignName);
                 if (smsCampaign == null || StringUtils.isBlank(smsCampaign.getMessage())) {
                     log.error("SMS campaign message '{}' not found. Please create it through the API first.", campaignName);
                     return;

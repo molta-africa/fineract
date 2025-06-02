@@ -24,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.campaigns.sms.domain.SmsCampaign;
 import org.apache.fineract.infrastructure.campaigns.sms.domain.molta.MoltaSmsCampaignRepository;
+import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.infrastructure.event.business.BusinessEventListener;
 import org.apache.fineract.infrastructure.event.business.domain.loan.transaction.LoanTransactionMakeRepaymentPostBusinessEvent;
 import org.apache.fineract.infrastructure.sms.domain.SmsMessage;
@@ -33,6 +34,9 @@ import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 
 @Component
@@ -52,21 +56,41 @@ public class MoltaLoanRepaymentSuccessfulNotificationListener implements Busines
             Loan loan = loanTransaction.getLoan();
             Client client = loan.getClient();
 
+            MoltaSmsLoanConfig moltaSmsLoanConfig = moltaSmsLoanConfigLoader.getMoltaSmsLoanConfig();
+            String campaignName;
+            SmsCampaign smsCampaign;
+
             if (client != null && client.mobileNo() != null && !client.mobileNo().isEmpty()) {
-                // Check if SMS is enabled for successful loan repayment
-                MoltaSmsLoanConfig moltaSmsLoanConfig = moltaSmsLoanConfigLoader.getMoltaSmsLoanConfig();
-                if (!moltaSmsLoanConfig.isRepaymentEnabled()) {
-                    log.info("SMS is not configured to be sent for successful loan repayment");
-                    return;
+                if (loan.getLoanStatus() != null && loan.getLoanStatus().equals(600)) { //CLOSED_OBLIGATIONS_MET
+                    // Check if SMS is enabled for successful completion of loan repayment
+                    if (!moltaSmsLoanConfig.isCompletionEnabled()) {
+                        log.info("SMS is not configured to be sent for loan completion");
+                        return;
+                    }
+
+                    // Find the campaign
+                    campaignName = moltaSmsLoanConfig.getCompletionCampaign();
+                } else { //REGULAR_REPAYMENT
+                    // Check if SMS is enabled for successful loan repayment
+                    if (!moltaSmsLoanConfig.isRepaymentEnabled()) {
+                        log.info("SMS is not configured to be sent for successful loan repayment");
+                        return;
+                    }
+
+                    // Find the campaign
+                    campaignName = moltaSmsLoanConfig.getRepaymentCampaign();
                 }
 
-                // Find the campaign
-                String campaignName = moltaSmsLoanConfig.getRepaymentCampaign();
-                SmsCampaign smsCampaign = moltaSmsCampaignRepository.findByCampaignName(campaignName);
-
+                smsCampaign = moltaSmsCampaignRepository.findFirstByCampaignNameOrderByIdDesc(campaignName);
                 if (smsCampaign == null || StringUtils.isBlank(smsCampaign.getMessage())) {
                     log.error("SMS campaign message '{}' not found. Please create it through the API first.", campaignName);
                     return;
+                }
+
+                String last4Digit = "";
+                ExternalId externalId = client.getExternalId();
+                if (externalId != null && StringUtils.isNotBlank(externalId.getValue())) {
+                    last4Digit = externalId.getValue().length() > 4 ? externalId.getValue().substring(externalId.getValue().length() - 4) : externalId.getValue();
                 }
 
                 // Create SMS message text
@@ -74,7 +98,9 @@ public class MoltaLoanRepaymentSuccessfulNotificationListener implements Busines
                 smsText = smsText.replace("${display_name}", client.getDisplayName())
                         .replace("${currency}", loan.getCurrency().getCode())
                         .replace("${account_number}", loan.getAccountNumber())
-                        .replace("${repayment_amount}", loanTransaction.getAmount().toString());
+                        .replace("${date}", LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")))
+                        .replace("${last4Digit}", last4Digit)
+                        .replace("${principal_amount}", loan.getApprovedPrincipal().toString());
 
                 // Create and save SMS message
                 SmsMessage smsMessage = SmsMessage.pendingSms(

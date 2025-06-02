@@ -24,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.campaigns.sms.domain.SmsCampaign;
 import org.apache.fineract.infrastructure.campaigns.sms.domain.molta.MoltaSmsCampaignRepository;
+import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.infrastructure.event.business.BusinessEventListener;
 import org.apache.fineract.infrastructure.event.business.domain.loan.LoanDisbursalBusinessEvent;
 import org.apache.fineract.infrastructure.sms.domain.SmsMessage;
@@ -32,6 +33,9 @@ import org.apache.fineract.infrastructure.sms.domain.SmsMessageStatusType;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 
 @Component
@@ -60,11 +64,17 @@ public class MoltaLoanDisbursedNotificationListener implements BusinessEventList
 
                 // Find the campaign
                 String campaignName = moltaSmsLoanConfig.getDisbursedCampaign();
-                SmsCampaign smsCampaign = moltaSmsCampaignRepository.findByCampaignName(campaignName);
+                SmsCampaign smsCampaign = moltaSmsCampaignRepository.findFirstByCampaignNameOrderByIdDesc(campaignName);
 
                 if (smsCampaign == null || StringUtils.isBlank(smsCampaign.getMessage())) {
                     log.error("SMS campaign message '{}' not found. Please create it through the API first.", campaignName);
                     return;
+                }
+
+                String last4Digit = "";
+                ExternalId externalId = client.getExternalId();
+                if (externalId != null && StringUtils.isNotBlank(externalId.getValue())) {
+                    last4Digit = externalId.getValue().length() > 4 ? externalId.getValue().substring(externalId.getValue().length() - 4) : externalId.getValue();
                 }
 
                 // Create SMS message text
@@ -72,6 +82,8 @@ public class MoltaLoanDisbursedNotificationListener implements BusinessEventList
                 smsText = smsText.replace("${display_name}", client.getDisplayName())
                         .replace("${currency}", loan.getCurrency().getCode())
                         .replace("${account_number}", loan.getAccountNumber())
+                        .replace("${date}", LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")))
+                        .replace("${last4Digit}", last4Digit)
                         .replace("${disbursed_amount}", loan.getNetDisbursalAmount().toString());
 
                 // Create and save SMS message
