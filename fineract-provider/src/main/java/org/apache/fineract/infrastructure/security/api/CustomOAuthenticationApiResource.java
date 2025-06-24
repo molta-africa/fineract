@@ -114,11 +114,14 @@ public class CustomOAuthenticationApiResource {
                 permissions.add(grantedAuthority.getAuthority());
             }
 
+            final AppUser principal = (AppUser) authenticationCheck.getPrincipal();
+
             Map<String, Object> claims = new HashMap<>();
             claims.put("permissions", permissions);
+            claims.put("firstName", principal.getFirstname());
+            claims.put("lastName", principal.getLastname());
             String accessToken = moltaJwtHelper.createJwtForClaims(request.username, claims);
 
-            final AppUser principal = (AppUser) authenticationCheck.getPrincipal();
             final Collection<RoleData> roles = new ArrayList<>();
             final Set<Role> userRoles = principal.getRoles();
             for (final Role role : userRoles) {
