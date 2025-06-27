@@ -120,6 +120,8 @@ public class CustomOAuthenticationApiResource {
             claims.put("permissions", permissions);
             claims.put("firstName", principal.getFirstname());
             claims.put("lastName", principal.getLastname());
+            claims.put("staffId", principal.getStaffId());
+            claims.put("email", principal.getEmail());
             String accessToken = moltaJwtHelper.createJwtForClaims(request.username, claims);
 
             final Collection<RoleData> roles = new ArrayList<>();
