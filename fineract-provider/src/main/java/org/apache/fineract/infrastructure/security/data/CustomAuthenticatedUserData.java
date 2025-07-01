@@ -51,6 +51,12 @@ public class CustomAuthenticatedUserData {
     @SuppressWarnings("unused")
     private String staffDisplayName;
     @SuppressWarnings("unused")
+    private String firstName;
+    @SuppressWarnings("unused")
+    private String lastName;
+    @SuppressWarnings("unused")
+    private String email;
+    @SuppressWarnings("unused")
     private EnumOptionData organisationalRole;
     @SuppressWarnings("unused")
     private Collection<RoleData> roles;
