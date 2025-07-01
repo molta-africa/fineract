@@ -118,10 +118,6 @@ public class CustomOAuthenticationApiResource {
 
             Map<String, Object> claims = new HashMap<>();
             claims.put("permissions", permissions);
-            claims.put("firstName", principal.getFirstname());
-            claims.put("lastName", principal.getLastname());
-            claims.put("staffId", principal.getStaffId());
-            claims.put("email", principal.getEmail());
             String accessToken = moltaJwtHelper.createJwtForClaims(request.username, claims);
 
             final Collection<RoleData> roles = new ArrayList<>();
@@ -133,7 +129,7 @@ public class CustomOAuthenticationApiResource {
             final Long officeId = principal.getOffice().getId();
             final String officeName = principal.getOffice().getName();
 
-            final Long staffId = principal.getStaffId();
+            final Long staffId = principal.getStaffId() == null ? 0L : principal.getStaffId();
             final String staffDisplayName = principal.getStaffDisplayName();
 
             final EnumOptionData organisationalRole = principal.organisationalRoleData();
@@ -142,12 +138,20 @@ public class CustomOAuthenticationApiResource {
                     && !principal.hasSpecificPermissionTo(TwoFactorConstants.BYPASS_TWO_FACTOR_PERMISSION);
             Long userId = principal.getId();
             if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {
-                customAuthenticatedUserData = new CustomAuthenticatedUserData().setUsername(request.username).setUserId(userId)
+                customAuthenticatedUserData = new CustomAuthenticatedUserData()
+                        .setUsername(request.username)
+                        .setUserId(userId)
                         .setBearerToken(accessToken)
                         .setAuthenticated(true).setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
             } else {
-                customAuthenticatedUserData = new CustomAuthenticatedUserData().setUsername(request.username).setOfficeId(officeId)
-                        .setOfficeName(officeName).setStaffId(staffId).setStaffDisplayName(staffDisplayName)
+                customAuthenticatedUserData = new CustomAuthenticatedUserData().setUsername(request.username)
+                        .setOfficeId(officeId)
+                        .setOfficeName(officeName)
+                        .setStaffId(staffId)
+                        .setFirstName(principal.getFirstname())
+                        .setLastName(principal.getLastname())
+                        .setEmail(principal.getEmail())
+                        .setStaffDisplayName(staffDisplayName)
                         .setOrganisationalRole(organisationalRole).setRoles(roles).setPermissions(permissions).setUserId(principal.getId())
                         .setAuthenticated(true)
                         .setBearerToken(accessToken)
