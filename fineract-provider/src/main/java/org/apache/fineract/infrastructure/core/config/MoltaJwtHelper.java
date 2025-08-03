@@ -24,6 +24,7 @@ import com.auth0.jwt.JWTCreator;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -45,6 +46,9 @@ public class MoltaJwtHelper {
     private final RSAPrivateKey privateKey;
     private final RSAPublicKey publicKey;
 
+    @Value("${molta.jwt.hour.duration}")
+    private int jwtHourDuration;
+
     private final JWT jwt;
 
     public MoltaJwtHelper(RSAPrivateKey privateKey, RSAPublicKey publicKey, JWT jwt) {
@@ -56,7 +60,7 @@ public class MoltaJwtHelper {
     public String createJwtForClaims(String subject, Map<String, Object> claims) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(Instant.now().toEpochMilli());
-        calendar.add(Calendar.MINUTE, 30);
+        calendar.add(Calendar.HOUR, jwtHourDuration);
 
         JWTCreator.Builder jwtBuilder = JWT.create().withSubject(subject);
         for (Map.Entry<String, Object> entry : claims.entrySet()) {
