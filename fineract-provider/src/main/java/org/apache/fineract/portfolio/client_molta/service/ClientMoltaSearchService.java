@@ -59,9 +59,16 @@ public class ClientMoltaSearchService {
 
     private Page<ClientSearchData> executeTextSearch(PagedRequest<ClientTextSearch> searchRequest) {
         AppUser appUser = context.authenticatedUser();
-        final Long staffId = appUser.getStaff() == null ? null : appUser.getStaff().getId();
         final String hierarchy = appUser.getOffice().getHierarchy();
         final boolean hasPermission = hasPermission(appUser);
+
+        final Long staffId;
+        if (hasPermission(appUser, "ALL_FUNCTIONS") || hasPermission(appUser, "ADMIN") ||
+                hasPermission(appUser, "COMPLIANCE") || hasPermission(appUser, "FINANCE")) {
+            staffId = null;
+        } else {
+            staffId = appUser.getStaff() == null ? null : appUser.getStaff().getId();
+        }
 
         Optional<ClientTextSearch> request = searchRequest.getRequest();
         String requestSearchText = request.map(ClientTextSearch::getText).orElse(null);
@@ -88,6 +95,17 @@ public class ClientMoltaSearchService {
             return true;
         } catch (Exception e) {
             log.error("Client - user has no permission to read all functions");
+        }
+
+        return false;
+    }
+
+    private boolean hasPermission(AppUser appUser, String permission) {
+        try {
+            appUser.validateHasReadPermission(permission);
+            return true;
+        } catch (Exception e) {
+            log.error("user has no {} permission", permission);
         }
 
         return false;
