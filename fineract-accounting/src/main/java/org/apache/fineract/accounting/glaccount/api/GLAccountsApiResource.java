@@ -40,11 +40,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.math.BigDecimal;
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.accounting.common.AccountingConstants;
 import org.apache.fineract.accounting.common.AccountingDropdownReadPlatformService;
@@ -253,6 +251,130 @@ public class GLAccountsApiResource {
         final CommandProcessingResult result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
 
         return this.apiJsonSerializerService.serialize(result);
+    }
+
+    @GET
+    @Path("{glAccountId}/balance")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(tags = { "General Ledger Account" }, summary = "Retrieve GL Account Balance", description = """
+            Retrieves the current balance of a GL account from the materialized balance table.
+
+            The balance is automatically maintained by database trigger for optimal performance.
+            Balance calculation logic:
+            - For Asset and Expense accounts: SUM(debits) - SUM(credits)
+            - For Liability, Equity, and Income accounts: SUM(credits) - SUM(debits)
+
+            Example Request:
+
+            glaccounts/6/balance
+
+            Example Response:
+
+            {
+              "balance": 0.000000,
+              "totalDebits": 1000.000000,
+              "totalCredits": 1000.000000
+            }
+            """)
+    @ApiResponse(responseCode = "200", description = "OK")
+    public String retrieveAccountBalance(@PathParam("glAccountId") @Parameter(description = "glAccountId") final Long glAccountId) {
+
+        this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSION);
+
+        final java.util.Map<String, java.math.BigDecimal> balanceData = this.glAccountReadPlatformService.retrieveGLAccountBalance(glAccountId);
+
+        return this.apiJsonSerializerService.serialize(balanceData);
+    }
+
+    @POST
+    @Path("balances")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(tags = { "General Ledger Account" }, summary = "Retrieve Multiple GL Account Balances", description = """
+            Retrieves the current balances of multiple GL accounts from the materialized balance table.
+
+            The balances are automatically maintained by database trigger for optimal performance.
+            Balance calculation logic:
+            - For Asset and Expense accounts: SUM(debits) - SUM(credits)
+            - For Liability, Equity, and Income accounts: SUM(credits) - SUM(debits)
+
+            Returns null for GL account IDs that don't exist instead of throwing an error.
+
+            Example Request:
+
+            POST glaccounts/balances
+            {
+              "glAccountIds": [6, 7, 8, 999]
+            }
+
+            Example Response:
+
+            [
+              {
+                "glAccountId": 6.000000,
+                "balance": 1000.000000,
+                "totalDebits": 1000.000000,
+                "totalCredits": 0.000000
+              },
+              {
+                "glAccountId": 7.000000,
+                "balance": -500.000000,
+                "totalDebits": 0.000000,
+                "totalCredits": 500.000000
+              },
+              {
+                "glAccountId": 8.000000,
+                "balance": 0.000000,
+                "totalDebits": 0.000000,
+                "totalCredits": 0.000000
+              },
+              null
+            ]
+            """)
+    @ApiResponse(responseCode = "200", description = "OK")
+    public String retrieveAccountBalances(@Parameter(hidden = true) final String apiRequestBodyAsJson) {
+
+        this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSION);
+
+        // Parse the request body to extract glAccountIds
+        final List<Long> glAccountIds = extractGLAccountIds(apiRequestBodyAsJson);
+
+        final List<Map<String, BigDecimal>> balancesData =
+            this.glAccountReadPlatformService.retrieveGLAccountBalances(glAccountIds);
+
+        return this.apiJsonSerializerService.serialize(balancesData);
+    }
+
+    private List<Long> extractGLAccountIds(final String apiRequestBodyAsJson) {
+        final List<Long> glAccountIds = new ArrayList<>();
+
+        if (apiRequestBodyAsJson != null && !apiRequestBodyAsJson.trim().isEmpty()) {
+            try {
+                // Simple JSON parsing to extract glAccountIds array
+                // Expected format: {"glAccountIds": [1, 2, 3]}
+                final String json = apiRequestBodyAsJson.trim();
+                final int startIndex = json.indexOf("[");
+                final int endIndex = json.indexOf("]");
+
+                if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+                    final String idsString = json.substring(startIndex + 1, endIndex);
+                    final String[] idStrings = idsString.split(",");
+
+                    for (final String idString : idStrings) {
+                        final String trimmed = idString.trim();
+                        if (!trimmed.isEmpty()) {
+                            glAccountIds.add(Long.parseLong(trimmed));
+                        }
+                    }
+                }
+            } catch (final Exception e) {
+                // If parsing fails, return empty list
+                return new ArrayList<>();
+            }
+        }
+
+        return glAccountIds;
     }
 
     private GLAccountData handleTemplate(final GLAccountData glAccountData) {
