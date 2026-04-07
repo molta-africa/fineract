@@ -148,6 +148,13 @@ public class ReadReportingServiceImpl implements ReadReportingService {
         sql = StringUtils.replaceIgnoreCase(sql, "NOW()", sqlGenerator.currentTenantDateTime());
         sql = StringUtils.replaceIgnoreCase(sql, "curdate()", sqlGenerator.currentBusinessDate());
         sql = StringUtils.replaceIgnoreCase(sql, "CURRENT_DATE", sqlGenerator.currentBusinessDate());
+
+        // Exclude customer GL accounts (gl_code starting with '2700-') from accounting reports
+        if ("Income Statement Table".equals(name) || "Trial Balance Table".equals(name) || "Trial Balance Summary Report".equals(name)
+                || "Balance Sheet Table".equals(name)) {
+            sql = "SELECT * FROM (" + sql + ") AS accounting_report WHERE glcode NOT LIKE '2700-%'";
+        }
+
         sql = this.genericDataService.wrapSQL(sql);
 
         return sql;

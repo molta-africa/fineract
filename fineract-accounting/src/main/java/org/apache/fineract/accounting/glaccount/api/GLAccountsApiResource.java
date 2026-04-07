@@ -442,4 +442,46 @@ public class GLAccountsApiResource {
                 fileDetail, locale, dateFormat);
         return this.apiJsonSerializerService.serialize(importDocumentId);
     }
+
+    @GET
+    @Path("balances/pattern")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(tags = { "General Ledger Account" }, summary = "Retrieve Total Balance for GL Accounts by Code Pattern", description = """
+            Retrieves the aggregated/total balances of all GL accounts matching a specific GL code pattern from the materialized balance table.
+
+            The balances are automatically maintained by database trigger for optimal performance.
+            Returns a single total/summary combining all matching accounts.
+
+            Balance calculation logic:
+            - For Asset and Expense accounts: SUM(debits) - SUM(credits)
+            - For Liability, Equity, and Income accounts: SUM(credits) - SUM(debits)
+
+            Example Request:
+
+            glaccounts/balances/pattern?glCodePattern=2700-CL-
+
+            This will return the total/aggregated balance for all accounts with GL codes starting with "2700-CL-"
+            (e.g., 2700-CL-0000001, 2700-CL-0000002, 2700-CL-0000003, etc.)
+
+            Example Response:
+
+            {
+              "totalBalance": 15000.000000,
+              "totalDebits": 50000.000000,
+              "totalCredits": 35000.000000,
+              "accountCount": 25
+            }
+            """)
+    @ApiResponse(responseCode = "200", description = "OK")
+    public String retrieveAccountBalancesByPattern(
+            @QueryParam("glCodePattern") @Parameter(description = "GL code pattern (e.g., '2700-CL-' to match accounts like 2700-CL-0000001)") final String glCodePattern) {
+
+        this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSION);
+
+        final Map<String, Object> totalBalanceData = this.glAccountReadPlatformService
+                .retrieveGLAccountBalancesTotalByCodePattern(glCodePattern);
+
+        return this.apiJsonSerializerService.serialize(totalBalanceData);
+    }
 }

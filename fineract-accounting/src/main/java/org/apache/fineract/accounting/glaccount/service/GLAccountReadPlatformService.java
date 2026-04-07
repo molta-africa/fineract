@@ -69,4 +69,16 @@ public interface GLAccountReadPlatformService {
      *         Returns null for accounts that don't exist instead of throwing an error.
      */
     List<Map<String, BigDecimal>> retrieveGLAccountBalances(List<Long> glAccountIds);
+
+    /**
+     * Retrieve aggregated/total balances for all GL accounts matching a GL code pattern
+     *
+     * The balances are retrieved from acc_gl_account_balance table which is
+     * automatically maintained by database trigger for performance.
+     * Returns a single total/summary of all matching accounts.
+     *
+     * @param glCodePattern the GL code pattern (e.g., "2700-CL-" to match accounts like 2700-CL-0000001)
+     * @return Map containing totalBalance, totalDebits, totalCredits, and accountCount
+     */
+    Map<String, Object> retrieveGLAccountBalancesTotalByCodePattern(String glCodePattern);
 }

@@ -361,4 +361,47 @@ public class GLAccountReadPlatformServiceImpl implements GLAccountReadPlatformSe
 
         return results;
     }
+
+    @Override
+    public Map<String, Object> retrieveGLAccountBalancesTotalByCodePattern(final String glCodePattern) {
+        if (glCodePattern == null || glCodePattern.trim().isEmpty()) {
+            return Map.of(
+                "totalBalance", BigDecimal.ZERO,
+                "totalDebits", BigDecimal.ZERO,
+                "totalCredits", BigDecimal.ZERO,
+                "accountCount", 0L
+            );
+        }
+
+        // SQL to retrieve aggregated totals for all accounts matching the pattern
+        final String sql = "SELECT "
+                + "COUNT(gl.id) as accountCount, "
+                + "COALESCE(SUM(bal.balance), 0) as totalBalance, "
+                + "COALESCE(SUM(bal.total_debits), 0) as totalDebits, "
+                + "COALESCE(SUM(bal.total_credits), 0) as totalCredits "
+                + "FROM acc_gl_account gl "
+                + "LEFT JOIN acc_gl_account_balance bal ON gl.id = bal.account_id "
+                + "WHERE gl.gl_code LIKE ?";
+
+        final String likePattern = glCodePattern + "%";
+
+        try {
+            return this.jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+                return Map.of(
+                    "totalBalance", (Object) rs.getBigDecimal("totalBalance"),
+                    "totalDebits", (Object) rs.getBigDecimal("totalDebits"),
+                    "totalCredits", (Object) rs.getBigDecimal("totalCredits"),
+                    "accountCount", (Object) rs.getLong("accountCount")
+                );
+            }, likePattern);
+        } catch (final EmptyResultDataAccessException e) {
+            // No matching accounts found
+            return Map.of(
+                "totalBalance", BigDecimal.ZERO,
+                "totalDebits", BigDecimal.ZERO,
+                "totalCredits", BigDecimal.ZERO,
+                "accountCount", 0L
+            );
+        }
+    }
 }
